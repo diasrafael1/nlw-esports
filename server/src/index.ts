@@ -5,6 +5,7 @@ import {
   convertHourStringToMinutes,
   convertMinutesToHourString,
 } from "./utils/convert-hours";
+import { registerAds } from "./validation/registerAds";
 
 const app = express();
 app.use(express.json());
@@ -29,20 +30,27 @@ app.post("/games/:id/ads", async (req, res) => {
   const { id } = req.params;
   const body = req.body;
 
-  const ad = await prisma.ad.create({
-    data: {
-      gameId: id,
-      name: body.name,
-      discord: body.discord,
-      yearsPlaying: body.yearsPlaying,
-      weekDays: body.weekDays.join(","),
-      hourStart: convertHourStringToMinutes(body.hourStart),
-      hourEnd: convertHourStringToMinutes(body.hourEnd),
-      useVoiceChannel: body.useVoiceChannel,
-    },
-  });
+  try {
+    await registerAds.validate(body);
 
-  return res.status(201).json(ad);
+    const ad = await prisma.ad.create({
+      data: {
+        gameId: id,
+        name: body.name,
+        discord: body.discord,
+        yearsPlaying: body.yearsPlaying,
+        weekDays: body.weekDays.join(","),
+        hourStart: convertHourStringToMinutes(body.hourStart),
+        hourEnd: convertHourStringToMinutes(body.hourEnd),
+        useVoiceChannel: body.useVoiceChannel,
+      },
+    });
+
+    return res.status(201).json(ad);
+  } catch (error: any) {
+    console.log(error);
+    return res.status(400).json(error.message);
+  }
 });
 
 app.get("/games/:id/ads", async (req, res) => {
